@@ -4,9 +4,11 @@ import com.appdevg6.biteandbyte.entity.User;
 import com.appdevg6.biteandbyte.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
 public class AuthController {
 	private final UserService userService;
 

@@ -1,6 +1,7 @@
 package com.appdevg6.biteandbyte.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,9 +42,11 @@ public class Recipe {
 	@Column(name = "update_at")
 	private LocalDateTime updateAt;
 
-	@OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL)
-	private List<RecipeComment> comments;
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<RecipeComment> comments;
 
-	@OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL)
-	private List<RecipeRating> ratings;
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<RecipeRating> ratings;
 }

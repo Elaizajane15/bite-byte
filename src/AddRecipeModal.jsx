@@ -1,27 +1,37 @@
 import React, { useState } from 'react';
 import { useToast } from './components/ToastContext';
 
-function AddRecipeModal({ onClose, onSubmit }) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    cookTime: '',
-    servings: '',
-    difficulty: '',
-    category: '',
-    ingredients: [''],
-    instructions: [''],
-    image: '',
-    video: ''
-  });
+function AddRecipeModal({ onClose, onSubmit, initialData, title, submitLabel }) {
+  const [formData, setFormData] = useState(() => ({
+    title: (initialData && initialData.title) || '',
+    description: (initialData && initialData.description) || '',
+    cookTime: (initialData && initialData.cookTime) || '',
+    servings: (initialData && initialData.servings) || '',
+    difficulty: (initialData && initialData.difficulty) || '',
+    category: (initialData && initialData.category) || '',
+    ingredients: (initialData && Array.isArray(initialData.ingredients) ? initialData.ingredients : [''] ),
+    instructions: (initialData && Array.isArray(initialData.instructions) ? initialData.instructions : [''] ),
+    image: (initialData && initialData.image) || '',
+    video: (initialData && initialData.video) || ''
+  }));
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [videoPreview, setVideoPreview] = useState(null);
+  const [imagePreview, setImagePreview] = useState(() => (initialData && initialData.image) || null);
+  const [videoPreview, setVideoPreview] = useState(() => (initialData && initialData.video) || null);
   const { showToast } = useToast();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (!formData.title.trim() || !formData.description.trim()) {
+      showToast('Title and description are required.', 'error');
+      return;
+    }
+    const ing = (formData.ingredients || []).map(s => (s || '').trim()).filter(Boolean);
+    const steps = (formData.instructions || []).map(s => (s || '').trim()).filter(Boolean);
+    if (ing.length === 0 || steps.length === 0) {
+      showToast('Please add at least one ingredient and one step.', 'error');
+      return;
+    }
+    onSubmit({ ...formData, ingredients: ing, instructions: steps });
   };
 
   const addIngredient = () => {
@@ -115,7 +125,7 @@ function AddRecipeModal({ onClose, onSubmit }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h2 className="modal-title">Add New Recipe</h2>
+        <h2 className="modal-title">{title || 'Add New Recipe'}</h2>
 
         <form onSubmit={handleSubmit} className="recipe-form">
           <div className="form-row">
@@ -306,7 +316,7 @@ function AddRecipeModal({ onClose, onSubmit }) {
               Cancel
             </button>
             <button type="submit" className="submit-btn">
-              Add Recipe
+              {submitLabel || 'Add Recipe'}
             </button>
           </div>
         </form>

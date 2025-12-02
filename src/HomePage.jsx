@@ -1,8 +1,9 @@
-  import React, { useState } from 'react';
+  import React, { useState, useEffect } from 'react';
   import RecipeDetail from './RecipeDetail';
   import UserProfile from './UserProfile';
   import AddRecipeModal from './AddRecipeModal';
   import { mockRecipes, categories } from './recipeData';
+  import { useToast } from './components/ToastContext';
 
   function RecipesPage({ currentUser, onLogout, setCurrentPage }) {
     const [recipes, setRecipes] = useState(mockRecipes);
@@ -10,10 +11,91 @@
     const [favorites, setFavorites] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
-    const [currentView, setCurrentView] = useState('home'); // home, my-recipes, favorites, recipe-detail, profile
+    const [currentView, setCurrentView] = useState(() => {
+      try { return localStorage.getItem('currentView') || 'home'; } catch (_) { return 'home'; }
+    });
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
     const [userRating, setUserRating] = useState(0);
+    const { showToast } = useToast();
+
+    const handleUpdateProfile = async ({ name, email, bio, currentPassword, newPassword }) => {
+      if (!currentUser || !currentUser.id) {
+        showToast('Please log in first.', 'error');
+        return;
+      }
+      const parts = (name || '').trim().split(/\s+/);
+      const firstname = parts[0] || '';
+      const lastname = parts.slice(1).join(' ') || '';
+      const password = (newPassword && newPassword.trim()) || (currentPassword && currentPassword.trim()) || '';
+      if (!email || !password) {
+        showToast('Email and current password are required.', 'error');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/users/${currentUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstname, lastname, email, password, bio })
+        });
+        if (!res.ok) {
+          showToast('Failed to update profile.', 'error');
+          return;
+        }
+        await res.json();
+        showToast('Profile updated.', 'success');
+      } catch (e) {
+        showToast('Network error.', 'error');
+      }
+    };
+
+    useEffect(() => {
+      (async () => {
+        try {
+          const res = await fetch('/api/recipes');
+          if (!res.ok) return;
+          const data = await res.json();
+          const mapped = data.map(r => ({
+            id: r.id,
+            title: r.title || '',
+            description: r.description || '',
+            ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
+            instructions: typeof r.instruction === 'string' ? r.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+            cookTime: r.cookTime || 0,
+            category: r.category || 'General',
+            difficulty: 'Medium',
+            image: r.coverPhotoUrl || '',
+            author: r.author && (r.author.firstname ? `${r.author.firstname}${r.author.lastname ? ' ' + r.author.lastname : ''}` : r.author.email),
+            authorId: r.author && r.author.id,
+            createdAt: r.createdAt || '',
+            likes: 0,
+            rating: 0,
+            totalRatings: 0,
+            tips: []
+          }));
+          setRecipes(mapped);
+          try {
+            const savedId = localStorage.getItem('selectedRecipeId');
+            const savedView = localStorage.getItem('currentView');
+            if (savedView) setCurrentView(savedView);
+            if (savedId) {
+              const found = mapped.find(r => String(r.id) === String(savedId));
+              if (found) { setSelectedRecipe(found); setCurrentView('recipe-detail'); }
+            }
+          } catch (_) {}
+        } catch (e) {
+          /* no-op */
+        }
+      })();
+    }, []);
+
+    useEffect(() => {
+      try { localStorage.setItem('currentView', currentView); } catch (_) {}
+    }, [currentView]);
+
+    useEffect(() => {
+      try { localStorage.setItem('selectedRecipeId', selectedRecipe ? String(selectedRecipe.id) : ''); } catch (_) {}
+    }, [selectedRecipe]);
 
     const getFilteredRecipes = () => {
       let recipesToFilter = recipes;
@@ -25,8 +107,9 @@
       }
 
       return recipesToFilter.filter(recipe => {
-        const matchesSearch = recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            recipe.description.toLowerCase().includes(searchTerm.toLowerCase());
+        const title = (recipe.title || '').toLowerCase();
+        const desc = (recipe.description || '').toLowerCase();
+        const matchesSearch = title.includes(searchTerm.toLowerCase()) || desc.includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
         return matchesSearch && matchesCategory;
       });
@@ -35,6 +118,11 @@
     const filteredRecipes = getFilteredRecipes();
 
     const toggleFavorite = (recipeId) => {
+      if (!currentUser || !currentUser.id) {
+        showToast('Please login first to save recipes.', 'error');
+        setCurrentPage('login');
+        return;
+      }
       if (favorites.includes(recipeId)) {
         setFavorites(favorites.filter(id => id !== recipeId));
       } else {
@@ -50,20 +138,68 @@
       ));
     };
 
-    const handleAddRecipe = (newRecipe) => {
-      const recipe = {
-        ...newRecipe,
-        id: Date.now().toString(),
-        author: currentUser.name,
-        createdAt: new Date().toLocaleDateString(),
-        likes: 0,
-        rating: 0,
-        totalRatings: 0,
-        tips: []
-      };
-      setMyRecipes([...myRecipes, recipe]);
-      setRecipes([...recipes, recipe]);
-      setShowAddRecipeModal(false);
+    const handleAddRecipe = async (newRecipe) => {
+      if (!currentUser || !currentUser.id) {
+        showToast('Please log in to add recipes.', 'error');
+        return;
+      }
+      try {
+        const payload = {
+          title: newRecipe.title,
+          description: newRecipe.description,
+          ingredients: (newRecipe.ingredients || []).join('; '),
+          instruction: (newRecipe.instructions || []).join('; '),
+          cookTime: Number(newRecipe.cookTime || 0),
+          category: newRecipe.category || 'General',
+          coverPhotoUrl: newRecipe.image || '',
+          author: { id: Number(currentUser.id) }
+        };
+        const res = await fetch('/api/recipes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          if (res.status === 400) {
+            showToast('Invalid recipe data or author. Please log in again.', 'error');
+          } else {
+            showToast('Failed to add recipe.', 'error');
+          }
+          return;
+        }
+        const r = await res.json();
+        const mapped = {
+          id: r.id,
+          title: r.title,
+          description: r.description || '',
+          ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
+          instructions: typeof r.instruction === 'string' ? r.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+          cookTime: r.cookTime || 0,
+          category: r.category || 'General',
+          difficulty: 'Medium',
+          image: r.coverPhotoUrl || '',
+          author: currentUser.name,
+          authorId: currentUser.id,
+          createdAt: new Date().toLocaleDateString(),
+          likes: 0,
+          rating: 0,
+          totalRatings: 0,
+          tips: []
+        };
+        setMyRecipes([...myRecipes, mapped]);
+        setRecipes([...recipes, mapped]);
+        setShowAddRecipeModal(false);
+        showToast('Recipe added.', 'success');
+      } catch (e) {
+        showToast('Network error.', 'error');
+      }
+    };
+
+    const handleDeleteRecipe = (recipeId) => {
+      setRecipes(recipes.filter(r => r.id !== recipeId));
+      setMyRecipes(myRecipes.filter(r => r.id !== recipeId));
+      setFavorites(favorites.filter(id => id !== recipeId));
+      setCurrentView('home');
     };
 
     return (
@@ -122,7 +258,26 @@
               onToggleFavorite={toggleFavorite}
               onLike={handleLike}
               userRating={userRating}
-              onRate={setUserRating}
+              onRate={async (star) => {
+                setUserRating(star);
+                if (currentUser && currentUser.id) {
+                  try {
+                    const payload = { recipe: { id: selectedRecipe.id }, user: { id: currentUser.id }, rating: star };
+                    await fetch('/api/ratings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    showToast('Thanks for rating.', 'success');
+                  } catch (e) {
+                    /* no-op */
+                  }
+                }
+              }}
+              onDelete={handleDeleteRecipe}
+              currentUser={currentUser}
+              onRecipeUpdated={(updated) => {
+                setSelectedRecipe(updated);
+                setRecipes(recipes.map(r => r.id === updated.id ? updated : r));
+                setMyRecipes(myRecipes.map(r => r.id === updated.id ? updated : r));
+              }}
+              canEdit={currentUser && selectedRecipe && String(selectedRecipe.authorId) === String(currentUser.id)}
             />
           ) : currentView === 'profile' ? (
             <UserProfile 
@@ -130,6 +285,7 @@
               myRecipes={myRecipes}
               favorites={favorites}
               onBack={() => setCurrentView('home')}
+              onUpdateProfile={handleUpdateProfile}
             />
           ) : (
             <>
