@@ -19,12 +19,16 @@ public class StartupRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         log.info("StartupRunner: Checking DB connectivity...");
-        User user = new User();
-        user.setFirstname("Init");
-        user.setLastname("User");
-        user.setEmail("init@example.com");
-        user.setPassword("pass");
-        userRepository.save(user);
-        log.info("StartupRunner: Saved user id={} email={}", user.getId(), user.getEmail());
+        if (userRepository.findByEmail("init@example.com").isEmpty()) {
+            User user = new User();
+            user.setFirstname("Init");
+            user.setLastname("User");
+            user.setEmail("init@example.com");
+            user.setPassword("pass");
+            userRepository.save(user);
+            log.info("StartupRunner: Saved user id={} email={}", user.getId(), user.getEmail());
+        } else {
+            log.info("StartupRunner: Seed user already exists");
+        }
     }
 }

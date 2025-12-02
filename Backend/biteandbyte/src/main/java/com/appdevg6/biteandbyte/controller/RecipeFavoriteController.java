@@ -9,12 +9,14 @@ import com.appdevg6.biteandbyte.service.RecipeService;
 import com.appdevg6.biteandbyte.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import java.util.Objects;
 
 import java.net.URI;
 
 @RestController
 @RequestMapping("/api/favorites")
+@CrossOrigin(origins = "*")
 public class RecipeFavoriteController {
 	private final RecipeFavoriteService favoriteService;
 	private final UserService userService;

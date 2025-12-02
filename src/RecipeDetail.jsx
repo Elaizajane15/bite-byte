@@ -1,23 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from './components/ToastContext';
+import AddRecipeModal from './AddRecipeModal';
 
-function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, userRating, onRate }) {
+function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, userRating, onRate, onDelete, currentUser, onRecipeUpdated, canEdit }) {
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState([
-    {
-      id: 1,
-      author: 'John Doe',
-      text: 'This recipe is amazing! Turned out perfectly.',
-      date: '2 days ago',
-      likes: 5
-    }
-  ]);
+  const [comments, setComments] = useState([]);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [imagePreview, setImagePreview] = useState(recipe.image || '');
   const { showToast } = useToast();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/comments/recipe/${recipe.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped = data.map(c => ({
+          id: c.id,
+          author: c.user && (c.user.firstname ? `${c.user.firstname}${c.user.lastname ? ' ' + c.user.lastname : ''}` : c.user.email),
+          text: c.comment || '',
+          date: '',
+          likes: 0
+        }));
+        setComments(mapped);
+      } catch (_) {}
+    })();
+  }, [recipe.id]);
   // Like recipe
   const handleLike = () => {
     if (!liked) {
@@ -27,20 +40,33 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
   };
 
   // Add comment
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
-
-    const newComment = {
-      id: comments.length + 1,
-      author: 'You',
-      text: comment,
-      date: 'Just now',
-      likes: 0
-    };
-
-    setComments([newComment, ...comments]);
-    setComment('');
+    if (!currentUser || !currentUser.id) {
+      showToast('Please log in to comment.', 'error');
+      return;
+    }
+    try {
+      const payload = { recipe: { id: recipe.id }, user: { id: currentUser.id }, comment };
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) return;
+      const c = await res.json();
+      const newComment = {
+        id: c.id,
+        author: currentUser.name || currentUser.email,
+        text: c.comment || comment,
+        date: '',
+        likes: 0
+      };
+      setComments([newComment, ...comments]);
+      setComment('');
+      showToast('Comment posted.', 'success');
+    } catch (_) {}
   };
 
   // Like comment
@@ -79,26 +105,78 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
 
   // Recipe Edit/Delete
   const handleRecipeEdit = () => {
-    showToast('Edit recipe functionality here', 'info');
-    // You can open a modal or navigate to an edit page
+    setIsEditing(true);
+  };
+
+  const handleEditFromModal = async (data) => {
+    try {
+      const payload = {
+        title: data.title,
+        description: data.description,
+        ingredients: (data.ingredients || []).join('; '),
+        instruction: (data.instructions || []).join('; '),
+        cookTime: recipe.cookTime || 0,
+        cuisine: recipe.cuisine || '',
+        category: data.category || recipe.category || 'General',
+        coverPhotoUrl: data.image || ''
+      };
+      const res = await fetch(`/api/recipes/${recipe.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        showToast('Failed to save changes.', 'error');
+        return;
+      }
+      const updated = await res.json();
+      const mapped = {
+        id: updated.id,
+        title: updated.title || '',
+        description: updated.description || '',
+        ingredients: typeof updated.ingredients === 'string' ? updated.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
+        instructions: typeof updated.instruction === 'string' ? updated.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+        cookTime: updated.cookTime || 0,
+        category: updated.category || 'General',
+        difficulty: recipe.difficulty,
+        image: updated.coverPhotoUrl || data.image || '',
+        author: recipe.author,
+        authorId: recipe.authorId,
+        createdAt: recipe.createdAt,
+        likes: recipe.likes,
+        rating: recipe.rating,
+        totalRatings: recipe.totalRatings,
+        tips: recipe.tips || []
+      };
+      if (typeof onRecipeUpdated === 'function') {
+        onRecipeUpdated(mapped);
+      }
+      setImagePreview(mapped.image);
+      setIsEditing(false);
+      showToast('Recipe updated.', 'success');
+    } catch (_) {}
   };
 
   const handleRecipeDelete = () => {
-    // show a custom confirmation box
-    setShowDeleteConfirm(true);
+    setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    setShowDeleteConfirm(false);
-    showToast('Recipe deleted!', 'success');
-    if (typeof onDelete === 'function') {
-      onDelete(recipe.id);
+  const confirmDelete = async () => {
+    try {
+      const res = await fetch(`/api/recipes/${recipe.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        showToast('Failed to delete recipe.', 'error');
+        setShowDeleteModal(false);
+        return;
+      }
+      if (typeof onDelete === 'function') onDelete(recipe.id);
+      showToast('Recipe deleted!', 'success');
+      setShowDeleteModal(false);
+      onBack();
+    } catch (_) {
+      showToast('Network error.', 'error');
+      setShowDeleteModal(false);
     }
-    onBack();
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
   };
 
   // Share link
@@ -115,7 +193,7 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
 
       <div className="recipe-detail-content">
         <div className="recipe-detail-left">
-          <img src={recipe.image} alt={recipe.title} className="recipe-detail-image" />
+          <img src={imagePreview || recipe.image} alt={recipe.title} className="recipe-detail-image" />
           
           {recipe.video && (
             <div className="recipe-video-container">
@@ -135,8 +213,6 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
           <p className="recipe-detail-description">{recipe.description}</p>
 
           <div className="recipe-author-info">
-            <span className="author-icon">👤</span>
-            <span>By {recipe.author}</span>
             <span className="recipe-date">📅 {recipe.createdAt}</span>
           </div>
 
@@ -161,7 +237,7 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
             </div>
           </div>
 
-          {/* Actions Bar with Edit/Delete */}
+          {/* Actions Bar */}
           <div className="recipe-actions-bar">
             <button 
               className={`action-btn ${liked ? 'liked' : ''}`}
@@ -176,9 +252,12 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
               {isFavorited ? '❤️' : '🤍'} Save Recipe
             </button>
 
-            {/* Edit/Delete Recipe Buttons */}
-            <button className="action-btn edit-btn" onClick={handleRecipeEdit}>✏️ Edit</button>
-            <button className="action-btn delete-btn" onClick={handleRecipeDelete}>🗑️ Delete</button>
+            {canEdit ? (
+              <>
+                <button className="submit-btn" onClick={handleRecipeEdit}>✏️ Edit Recipe</button>
+                <button className="action-btn delete-btn" onClick={handleRecipeDelete}>🗑️ Delete</button>
+              </>
+            ) : null}
 
             <div className="share-container">
               <button 
@@ -195,7 +274,6 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
                   </div>
                   <div className="share-options">
                     <button className="share-option" onClick={copyLink}>📋 Copy Link</button>
-                    {/* Other share buttons can remain here */}
                   </div>
                 </div>
               )}
@@ -206,7 +284,7 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
           <div className="instructions-section">
             <h2>Instructions</h2>
             <ol className="instructions-list">
-              {recipe.instructions.map((step, index) => (
+              {(Array.isArray(recipe.instructions) ? recipe.instructions : []).map((step, index) => (
                 <li key={index} className="instruction-step">
                   <span className="step-number">{index + 1}</span>
                   <p>{step}</p>
@@ -317,7 +395,7 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
           <div className="ingredients-card">
             <h3>Ingredients</h3>
             <ul className="ingredients-list">
-              {recipe.ingredients.map((ingredient, index) => (
+              {(Array.isArray(recipe.ingredients) ? recipe.ingredients : []).map((ingredient, index) => (
                 <li key={index} className="ingredient-item">
                   <span className="ingredient-bullet">•</span>
                   {ingredient}
@@ -338,6 +416,43 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
           )}
         </div>
       </div>
+
+      {isEditing && (
+        <AddRecipeModal
+          onClose={() => setIsEditing(false)}
+          onSubmit={handleEditFromModal}
+          initialData={{
+            title: recipe.title || '',
+            description: recipe.description || '',
+            cookTime: recipe.cookTime || '',
+            category: recipe.category || 'General',
+            ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+            instructions: Array.isArray(recipe.instructions) ? recipe.instructions : [],
+            image: imagePreview || recipe.image || ''
+          }}
+          title="Edit Recipe"
+          submitLabel="Save changes"
+        />
+      )}
+
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowDeleteModal(false)}>✕</button>
+            <h2 className="modal-title">Delete Recipe</h2>
+            <div className="delete-body">
+              <div className="delete-icon">⚠️</div>
+              <p>Are you sure you want to delete "{recipe.title}"?</p>
+              {/* image removed per request */}
+              <p>This action cannot be undone.</p>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="cancel-btn" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <button type="button" className="submit-btn" onClick={confirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LandingPage from './LandingPage';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
@@ -7,8 +7,18 @@ import './App.css';
 import { ToastProvider } from './components/ToastContext';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('landing');
-  const [currentUser, setCurrentUser] = useState({ name: 'Guest' });
+  const initialPage = typeof window !== 'undefined' ? (localStorage.getItem('currentPage') || 'landing') : 'landing';
+  const initialUser = typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('currentUser') || '{"name":"Guest"}')) : { name: 'Guest' };
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [currentUser, setCurrentUser] = useState(initialUser);
+
+  useEffect(() => {
+    try { localStorage.setItem('currentPage', currentPage); } catch (_) {}
+  }, [currentPage]);
+
+  useEffect(() => {
+    try { localStorage.setItem('currentUser', JSON.stringify(currentUser || { name: 'Guest' })); } catch (_) {}
+  }, [currentUser]);
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
@@ -23,6 +33,12 @@ function App() {
   const handleLogout = () => {
     setCurrentUser({ name: 'Guest' });
     setCurrentPage('landing');
+    try {
+      localStorage.removeItem('currentUser');
+      localStorage.setItem('currentPage', 'landing');
+      localStorage.removeItem('currentView');
+      localStorage.removeItem('selectedRecipeId');
+    } catch (_) {}
   };
 
   switch (currentPage) {

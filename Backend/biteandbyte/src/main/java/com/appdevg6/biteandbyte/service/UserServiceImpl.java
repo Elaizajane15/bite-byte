@@ -42,6 +42,7 @@ public class UserServiceImpl implements UserService {
 		existing.setEmail(user.getEmail());
 		// salt/hash password elsewhere
 		existing.setPassword(user.getPassword());
+		existing.setBio(user.getBio());
 		return userRepository.save(existing);
 	}
 

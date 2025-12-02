@@ -8,20 +8,27 @@ function LoginPage({ setCurrentPage, onLogin }) {
 
   const { showToast } = useToast();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       showToast("Please enter your email and password.", 'error');
       return;
     }
-
-    // Fake login
-    const fakeUser = {
-      name: email.split("@")[0], // use email prefix as username
-      email
-    };
-
-    onLogin(fakeUser);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!res.ok) {
+        showToast('Login failed.', 'error');
+        return;
+      }
+      const user = await res.json();
+      onLogin({ id: user.id, name: user.firstname || user.email.split('@')[0], email: user.email, createdAt: user.createdAt, bio: user.bio || '' });
+    } catch (err) {
+      showToast('Network error. Please check backend is running at 8080.', 'error');
+    }
   };
 
   return (

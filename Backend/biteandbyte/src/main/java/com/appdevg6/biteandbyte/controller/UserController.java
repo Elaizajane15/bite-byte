@@ -4,6 +4,7 @@ import com.appdevg6.biteandbyte.entity.User;
 import com.appdevg6.biteandbyte.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import java.util.Objects;
 
 import java.net.URI;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
 public class UserController {
 	private final UserService userService;
 

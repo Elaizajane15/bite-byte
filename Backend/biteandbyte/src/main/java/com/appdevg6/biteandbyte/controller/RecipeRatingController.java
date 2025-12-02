@@ -8,6 +8,7 @@ import com.appdevg6.biteandbyte.service.RecipeService;
 import com.appdevg6.biteandbyte.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import java.util.Objects;
 
 import java.net.URI;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/ratings")
+@CrossOrigin(origins = "*")
 public class RecipeRatingController {
 	private final RecipeRatingService ratingService;
 	private final UserService userService;

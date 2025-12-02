@@ -13,25 +13,35 @@ function SignupPage({ setCurrentPage, onSignup }) {
 
   const { showToast } = useToast();
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!firstname || !lastname || !email || !password) {
       showToast("Please fill in all fields.", 'error');
       return;
     }
-
     if (password !== confirmPassword) {
       showToast("Passwords do not match.", 'error');
       return;
     }
-
-    // TEMP FAKE SIGNUP — replace with API
-    const newUser = { firstname, lastname, email };
-
-    showToast("Account created successfully!", 'success');
-
-    if(onSignup) onSignup(newUser);
-
-    setCurrentPage("login");
+    try {
+      const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+      const res = await fetch(`${API_BASE}/api/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstname, lastname, email, password })
+      });
+      if (!res.ok) {
+        showToast('Sign up failed.', 'error');
+        return;
+      }
+      const user = await res.json();
+      showToast("Account created successfully!", 'success');
+      if (onSignup) {
+        const name = user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : (user.firstname || email.split('@')[0]);
+        onSignup({ id: user.id, name, email: user.email, createdAt: user.createdAt, bio: user.bio || '' });
+      }
+    } catch (e) {
+      showToast('Network error.', 'error');
+    }
   };
 
   return (

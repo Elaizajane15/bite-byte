@@ -26,7 +26,7 @@ function LandingPage({ setCurrentPage }) {
   // If a recipe is selected, show RecipeDetail as a full  page
   if (selectedRecipe) {
     return (
-        <RecipeDetail
+      <RecipeDetail
         recipe={selectedRecipe}
         onBack={() => setSelectedRecipe(null)}
         isFavorited={false}
@@ -37,8 +37,8 @@ function LandingPage({ setCurrentPage }) {
         onLike={() => {}}
         userRating={0}
         onRate={() => {}}
-     
-      />
+        canEdit={false}
+     />
     );
   }
 
