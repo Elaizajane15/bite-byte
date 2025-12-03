@@ -81,6 +81,13 @@ body {
   width: 100%; /* <-- This makes the Home button centered */
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-left: auto;
+}
+
 .home-button {
   padding: 10px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

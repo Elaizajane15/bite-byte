@@ -10,7 +10,9 @@ function LoginPage({ setCurrentPage, onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    const emailTrim = (email || '').trim();
+    const passwordTrim = (password || '').trim();
+    if (!emailTrim || !passwordTrim) {
       showToast("Please enter your email and password.", 'error');
       return;
     }
@@ -18,10 +20,10 @@ function LoginPage({ setCurrentPage, onLogin }) {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: emailTrim, password: passwordTrim })
       });
       if (!res.ok) {
-        showToast('Login failed.', 'error');
+        showToast('Invalid email or password.', 'error');
         return;
       }
       const user = await res.json();
@@ -40,12 +42,12 @@ function LoginPage({ setCurrentPage, onLogin }) {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <input className="input" type="email" placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} required />
     
             <label>Password</label>
             <div className="input-wrapper">
-              <input type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)}>
+              <input className="input" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <button type="button" className="eye-button" onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? "👁️" : "👁️‍🗨️"}
               </button>
             </div>
@@ -54,7 +56,7 @@ function LoginPage({ setCurrentPage, onLogin }) {
           <button type="submit" className="submit-button">Sign In</button>
         </form>
 
-        <p>
+        <p className="switch-text">
           Don't have an account? <span className="switch-link" onClick={() => setCurrentPage("signup")}>Sign Up</span>
         </p>
       </div>

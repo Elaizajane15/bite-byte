@@ -19,6 +19,10 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public User create(User user) {
 		user.setCreatedAt(LocalDateTime.now());
+		if (user.getEmail() != null) user.setEmail(user.getEmail().trim().toLowerCase());
+		if (user.getFirstname() != null) user.setFirstname(user.getFirstname().trim());
+		if (user.getLastname() != null) user.setLastname(user.getLastname().trim());
+		if (user.getPassword() != null) user.setPassword(user.getPassword().trim());
 		return userRepository.save(user);
 	}
 
@@ -37,11 +41,11 @@ public class UserServiceImpl implements UserService {
 	public User update(Long id, User user) {
 		User existing = findById(id);
 		if (existing == null) return null;
-		existing.setFirstname(user.getFirstname());
-		existing.setLastname(user.getLastname());
-		existing.setEmail(user.getEmail());
+		existing.setFirstname(user.getFirstname() == null ? null : user.getFirstname().trim());
+		existing.setLastname(user.getLastname() == null ? null : user.getLastname().trim());
+		existing.setEmail(user.getEmail() == null ? null : user.getEmail().trim().toLowerCase());
 		// salt/hash password elsewhere
-		existing.setPassword(user.getPassword());
+		existing.setPassword(user.getPassword() == null ? null : user.getPassword().trim());
 		existing.setBio(user.getBio());
 		return userRepository.save(existing);
 	}
@@ -54,6 +58,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public User findByEmail(String email) {
-		return userRepository.findByEmail(email).orElse(null);
+		String normalized = email == null ? null : email.trim().toLowerCase();
+		return normalized == null || normalized.isEmpty() ? null : userRepository.findByEmailIgnoreCase(normalized).orElse(null);
 	}
 }

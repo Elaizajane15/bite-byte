@@ -14,31 +14,36 @@ function SignupPage({ setCurrentPage, onSignup }) {
   const { showToast } = useToast();
 
   const handleSignup = async () => {
-    if (!firstname || !lastname || !email || !password) {
+    const firstnameTrim = (firstname || '').trim();
+    const lastnameTrim = (lastname || '').trim();
+    const emailTrim = (email || '').trim();
+    const passwordTrim = (password || '').trim();
+    const confirmTrim = (confirmPassword || '').trim();
+    if (!firstnameTrim || !lastnameTrim || !emailTrim || !passwordTrim) {
       showToast("Please fill in all fields.", 'error');
       return;
     }
-    if (password !== confirmPassword) {
+    if (passwordTrim !== confirmTrim) {
       showToast("Passwords do not match.", 'error');
       return;
     }
     try {
-      const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
-      const res = await fetch(`${API_BASE}/api/users/register`, {
+      const res = await fetch(`/api/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstname, lastname, email, password })
+        body: JSON.stringify({ firstname: firstnameTrim, lastname: lastnameTrim, email: emailTrim, password: passwordTrim })
       });
       if (!res.ok) {
-        showToast('Sign up failed.', 'error');
+        showToast('Sign up failed. Please try a different email.', 'error');
         return;
       }
       const user = await res.json();
       showToast("Account created successfully!", 'success');
       if (onSignup) {
-        const name = user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : (user.firstname || email.split('@')[0]);
+        const name = user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : (user.firstname || emailTrim.split('@')[0]);
         onSignup({ id: user.id, name, email: user.email, createdAt: user.createdAt, bio: user.bio || '' });
       }
+      // Stay on the signup page after successful registration
     } catch (e) {
       showToast('Network error.', 'error');
     }
