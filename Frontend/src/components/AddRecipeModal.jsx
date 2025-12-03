@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useToast } from './components/ToastContext';
+import { useToast } from './ToastContext';
 
 function AddRecipeModal({ onClose, onSubmit, initialData, title, submitLabel }) {
   const [formData, setFormData] = useState(() => ({
@@ -9,8 +9,8 @@ function AddRecipeModal({ onClose, onSubmit, initialData, title, submitLabel }) 
     servings: (initialData && initialData.servings) || '',
     difficulty: (initialData && initialData.difficulty) || '',
     category: (initialData && initialData.category) || '',
-    ingredients: (initialData && Array.isArray(initialData.ingredients) ? initialData.ingredients : [''] ),
-    instructions: (initialData && Array.isArray(initialData.instructions) ? initialData.instructions : [''] ),
+    ingredients: (initialData && Array.isArray(initialData.ingredients) ? initialData.ingredients : ['']),
+    instructions: (initialData && Array.isArray(initialData.instructions) ? initialData.instructions : ['']),
     image: (initialData && initialData.image) || '',
     video: (initialData && initialData.video) || ''
   }));
@@ -98,7 +98,7 @@ function AddRecipeModal({ onClose, onSubmit, initialData, title, submitLabel }) 
         showToast('Video size should be less than 50MB', 'error');
         return;
       }
-      
+
 
       const reader = new FileReader();
       reader.onloadend = () => {
