@@ -237,6 +237,8 @@
               <button className="add-recipe-btn" onClick={() => setShowAddRecipeModal(true)}>
                 ➕ Add Recipe
               </button>
+            </div>
+            <div className="header-actions">
               <button className="user-info" onClick={() => setCurrentView('profile')}>
                 <span className="user-icon">👤</span>
                 {currentUser.name}
@@ -292,7 +294,9 @@
               {/* Hero Section */}
               <div className="recipes-hero">
                 <h2 className="recipes-welcome">
-                  Welcome back, <span className="gradient-text">{currentUser.name}</span>!
+                  {currentUser && currentUser.name && currentUser.name !== 'Guest'
+                    ? (<><span>Welcome back, </span><span className="gradient-text">{currentUser.name}</span><span>!</span></>)
+                    : 'Welcome back!'}
                 </h2>
                 <p className="recipes-subtitle">What delicious recipe will you discover today?</p>
               </div>

@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# H2 file-based database artifacts
+data/
+data/**
+*.mv.db
+*.trace.db
