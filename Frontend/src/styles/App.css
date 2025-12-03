@@ -36,6 +36,7 @@ body {
 .logo {
   display: flex;
   align-items: center;
+
   gap: 12px;
 }
 
@@ -64,6 +65,7 @@ body {
   font-size: 11px;
   color: #999;
 }
+
 .header-buttons-container {
   display: flex;
   justify-content: center;
@@ -78,7 +80,8 @@ body {
   flex: 1;
   margin: 12px;
   justify-content: center;
-  width: 100%; /* <-- This makes the Home button centered */
+  width: 100%;
+  /* <-- This makes the Home button centered */
 }
 
 .header-actions {
@@ -327,7 +330,7 @@ body {
   background-color: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   width: 400px;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -376,7 +379,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -431,8 +434,8 @@ body {
 .landing-page .recipe-card {
   background: linear-gradient(180deg, #fff7f3 0%, #ffffff 100%);
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(20,20,60,0.06);
-  border: 1px solid rgba(255,159,112,0.08);
+  box-shadow: 0 10px 30px rgba(20, 20, 60, 0.06);
+  border: 1px solid rgba(255, 159, 112, 0.08);
 }
 
 .landing-page .recipe-card .card-content {
@@ -449,7 +452,7 @@ body {
 }
 
 .landing-page .recipe-card .recipe-category-badge {
-  background: rgba(255,159,112,0.12);
+  background: rgba(255, 159, 112, 0.12);
   color: #ff7a59;
   padding: 6px 8px;
   border-radius: 8px;
@@ -591,7 +594,7 @@ body {
   font-weight: 700;
   color: white;
   margin: 0 auto 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .step-number-1 {
@@ -1276,9 +1279,12 @@ body {
 }
 
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -1486,7 +1492,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  align-items: center ;
+  align-items: center;
 }
 
 .nav-btn:hover {
@@ -1496,7 +1502,7 @@ body {
 .nav-btn.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(255, 159, 112, 0.3);  
+  box-shadow: 0 4px 15px rgba(255, 159, 112, 0.3);
   align-items: center;
 }
 
@@ -1914,11 +1920,13 @@ body {
   margin: 0 auto;
   padding: 40px 20px;
 }
+
 .edit-profile-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
 }
+
 .profile-header {
   display: flex;
   align-items: center;
@@ -2054,47 +2062,56 @@ body {
   font-size: 14px;
   color: #999;
 }
+
 .edit-profile-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .edit-profile-content {
   background: #fff;
   padding: 20px;
   border-radius: 10px;
   width: 300px;
 }
+
 .edit-profile-content label {
   display: block;
   margin-bottom: 10px;
 }
+
 .edit-profile-content input {
   width: 100%;
   padding: 5px;
   margin-top: 5px;
 }
+
 .edit-profile-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
 }
-.save-btn, .cancel-btn {
+
+.save-btn,
+.cancel-btn {
   padding: 5px 10px;
   cursor: pointer;
 }
+
 .save-btn {
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 5px;
 }
+
 .cancel-btn {
   background-color: #f44336;
   color: white;
@@ -2492,6 +2509,7 @@ body {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
