@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function UserProfile({ currentUser, myRecipes, favorites, onBack, onUpdateProfile }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -7,6 +7,12 @@ function UserProfile({ currentUser, myRecipes, favorites, onBack, onUpdateProfil
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [bio, setBio] = useState(currentUser.bio || '');
+
+  useEffect(() => {
+    setName(currentUser.name);
+    setEmail(currentUser.email);
+    setBio(currentUser.bio || '');
+  }, [currentUser]);
 
   const handleSave = () => {
     // Pass the updated info to parent
@@ -154,14 +160,13 @@ function UserProfile({ currentUser, myRecipes, favorites, onBack, onUpdateProfil
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>New Password *</label>
+                  <label>New Password</label>
                   <div className="input-wrapper">
                     <input
                       type="password"
                       placeholder="Enter new password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      required
                     />
                   </div>
                 </div>

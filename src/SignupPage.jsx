@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from './components/ToastContext';
 
-function SignupPage({ setCurrentPage, onSignup }) {
+function SignupPage({ onSignup }) {
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ function SignupPage({ setCurrentPage, onSignup }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignup = async () => {
     if (!firstname || !lastname || !email || !password) {
@@ -34,11 +36,8 @@ function SignupPage({ setCurrentPage, onSignup }) {
         return;
       }
       const user = await res.json();
-      showToast("Account created successfully!", 'success');
-      if (onSignup) {
-        const name = user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : (user.firstname || email.split('@')[0]);
-        onSignup({ id: user.id, name, email: user.email, createdAt: user.createdAt, bio: user.bio || '' });
-      }
+      showToast("Account created successfully! Please sign in.", 'success');
+      navigate('/login');
     } catch (e) {
       showToast('Network error.', 'error');
     }
@@ -48,7 +47,7 @@ function SignupPage({ setCurrentPage, onSignup }) {
     <div className="auth-page">
       <div className="auth-card">
 
-        <button className="close-button" onClick={() => setCurrentPage("landing")}>
+        <button className="close-button" onClick={() => navigate('/') }>
           ✕
         </button>
 
@@ -136,7 +135,7 @@ function SignupPage({ setCurrentPage, onSignup }) {
 
         <p className="switch-text">
           Already have an account?{" "}
-          <span className="switch-link" onClick={() => setCurrentPage("login")}>
+          <span className="switch-link" onClick={() => navigate('/login')}>
             Sign in
           </span>
         </p>

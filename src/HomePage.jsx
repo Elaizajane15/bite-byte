@@ -1,11 +1,12 @@
   import React, { useState, useEffect } from 'react';
+  import { useNavigate } from 'react-router-dom';
   import RecipeDetail from './RecipeDetail';
   import UserProfile from './UserProfile';
   import AddRecipeModal from './AddRecipeModal';
   import { mockRecipes, categories } from './recipeData';
   import { useToast } from './components/ToastContext';
 
-  function RecipesPage({ currentUser, onLogout, setCurrentPage }) {
+  function RecipesPage({ currentUser, onLogout, onUserUpdated }) {
     const [recipes, setRecipes] = useState(mockRecipes);
     const [myRecipes, setMyRecipes] = useState([]);
     const [favorites, setFavorites] = useState([]);
@@ -18,6 +19,7 @@
     const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
     const [userRating, setUserRating] = useState(0);
     const { showToast } = useToast();
+    const navigate = useNavigate();
 
     const handleUpdateProfile = async ({ name, email, bio, currentPassword, newPassword }) => {
       if (!currentUser || !currentUser.id) {
@@ -42,7 +44,13 @@
           showToast('Failed to update profile.', 'error');
           return;
         }
-        await res.json();
+        const updated = await res.json();
+        const displayName = ((updated.firstname || '').trim() || (updated.lastname || '').trim())
+          ? `${(updated.firstname || '').trim()}${updated.lastname ? ' ' + updated.lastname.trim() : ''}`.trim()
+          : (updated.email ? updated.email.split('@')[0] : (currentUser.name || 'User'));
+        if (typeof onUserUpdated === 'function') {
+          onUserUpdated({ id: currentUser.id, name: displayName, email: updated.email || email, createdAt: updated.createdAt || currentUser.createdAt, bio: updated.bio || '' });
+        }
         showToast('Profile updated.', 'success');
       } catch (e) {
         showToast('Network error.', 'error');
@@ -59,8 +67,8 @@
             id: r.id,
             title: r.title || '',
             description: r.description || '',
-            ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
-            instructions: typeof r.instruction === 'string' ? r.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+            ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
+            instructions: typeof r.instruction === 'string' ? r.instruction.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
             cookTime: r.cookTime || 0,
             category: r.category || 'General',
             difficulty: 'Medium',
@@ -117,16 +125,37 @@
 
     const filteredRecipes = getFilteredRecipes();
 
-    const toggleFavorite = (recipeId) => {
+    const toggleFavorite = async (recipeId) => {
       if (!currentUser || !currentUser.id) {
         showToast('Please login first to save recipes.', 'error');
-        setCurrentPage('login');
+        navigate('/login');
         return;
       }
-      if (favorites.includes(recipeId)) {
-        setFavorites(favorites.filter(id => id !== recipeId));
-      } else {
-        setFavorites([...favorites, recipeId]);
+      try {
+        if (favorites.includes(recipeId)) {
+          const res = await fetch(`/api/favorites?userId=${currentUser.id}&recipeId=${recipeId}`, { method: 'DELETE' });
+          if (!res.ok) {
+            showToast('Failed to remove favorite.', 'error');
+            return;
+          }
+          setFavorites(favorites.filter(id => id !== recipeId));
+          showToast('Removed from favorites.', 'success');
+        } else {
+          const payload = { recipe: { id: recipeId }, user: { id: currentUser.id } };
+          const res = await fetch('/api/favorites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            showToast('Failed to save favorite.', 'error');
+            return;
+          }
+          setFavorites([...favorites, recipeId]);
+          showToast('Saved to favorites.', 'success');
+        }
+      } catch (e) {
+        showToast('Network error.', 'error');
       }
     };
 
@@ -147,8 +176,8 @@
         const payload = {
           title: newRecipe.title,
           description: newRecipe.description,
-          ingredients: (newRecipe.ingredients || []).join('; '),
-          instruction: (newRecipe.instructions || []).join('; '),
+          ingredients: (newRecipe.ingredients || []).join('\n'),
+          instruction: (newRecipe.instructions || []).join('\n'),
           cookTime: Number(newRecipe.cookTime || 0),
           category: newRecipe.category || 'General',
           coverPhotoUrl: newRecipe.image || '',
@@ -172,8 +201,8 @@
           id: r.id,
           title: r.title,
           description: r.description || '',
-          ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
-          instructions: typeof r.instruction === 'string' ? r.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+          ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
+          instructions: typeof r.instruction === 'string' ? r.instruction.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
           cookTime: r.cookTime || 0,
           category: r.category || 'General',
           difficulty: 'Medium',
@@ -207,7 +236,7 @@
         {/* Header */}
         <header className="header">
           <div className="header-content">
-            <div className="logo" onClick={() => setCurrentPage('home')} style={{cursor: 'pointer'}}>
+            <div className="logo" onClick={() => navigate('/home')} style={{cursor: 'pointer'}}>
               <div className="logo-icon">🍳</div>
               <div>
                 <div className="logo-title">RecipeShare</div>
@@ -215,7 +244,7 @@
               </div>
             </div>
             
-            <div className="header-buttons">
+            <div className="header-center">
               <button 
                 className={`nav-btn ${currentView === 'home' ? 'active' : ''}`}
                 onClick={() => setCurrentView('home')}
@@ -223,25 +252,42 @@
                 🏠 Home
               </button>
               <button 
+                className={`nav-btn ${currentView === 'favorites' ? 'active' : ''}`}
+                onClick={() => setCurrentView('favorites')}
+              >
+                ❤️ My Favorites
+              </button>
+              <button className="add-recipe-btn" onClick={() => {
+                if (!currentUser || !currentUser.id) {
+                  showToast('Please log in to add recipes.', 'error');
+                  navigate('/login');
+                  return;
+                }
+                setShowAddRecipeModal(true);
+              }}>
+                ➕ Add Recipe
+              </button>
+            </div>
+
+            <div className="header-right">
+              <button 
                 className={`nav-btn ${currentView === 'my-recipes' ? 'active' : ''}`}
                 onClick={() => setCurrentView('my-recipes')}
               >
                 📖 My Recipes
               </button>
-              <button 
-                className={`nav-btn ${currentView === 'favorites' ? 'active' : ''}`}
-                onClick={() => setCurrentView('favorites')}
-              >
-                ❤️ Favorites
-              </button>
-              <button className="add-recipe-btn" onClick={() => setShowAddRecipeModal(true)}>
-                ➕ Add Recipe
-              </button>
-              <button className="user-info" onClick={() => setCurrentView('profile')}>
+              <button className="user-info" onClick={() => {
+                if (!currentUser || !currentUser.id) {
+                  showToast('Please log in to view profile.', 'error');
+                  navigate('/login');
+                  return;
+                }
+                setCurrentView('profile');
+              }}>
                 <span className="user-icon">👤</span>
                 {currentUser.name}
               </button>
-              <button className="logout-button" onClick={onLogout}>
+              <button className="logout-button" onClick={() => { onLogout(); navigate('/'); }}>
                 Logout
               </button>
             </div>
@@ -259,15 +305,17 @@
               onLike={handleLike}
               userRating={userRating}
               onRate={async (star) => {
+                if (!currentUser || !currentUser.id) {
+                  showToast('Please log in to rate recipes.', 'error');
+                  navigate('/login');
+                  return;
+                }
                 setUserRating(star);
-                if (currentUser && currentUser.id) {
-                  try {
-                    const payload = { recipe: { id: selectedRecipe.id }, user: { id: currentUser.id }, rating: star };
-                    await fetch('/api/ratings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    showToast('Thanks for rating.', 'success');
-                  } catch (e) {
-                    /* no-op */
-                  }
+                try {
+                  const payload = { recipe: { id: selectedRecipe.id }, user: { id: currentUser.id }, rating: star };
+                  await fetch('/api/ratings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                  showToast('Thanks for rating.', 'success');
+                } catch (e) {
                 }
               }}
               onDelete={handleDeleteRecipe}
@@ -278,6 +326,7 @@
                 setMyRecipes(myRecipes.map(r => r.id === updated.id ? updated : r));
               }}
               canEdit={currentUser && selectedRecipe && String(selectedRecipe.authorId) === String(currentUser.id)}
+              showHeader={false}
             />
           ) : currentView === 'profile' ? (
             <UserProfile 

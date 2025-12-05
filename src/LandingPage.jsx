@@ -1,13 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import RecipeDetail from './RecipeDetail';
 import { mockRecipes, categories } from './recipeData';
 import { useToast } from './components/ToastContext';
 
 function LandingPage({ setCurrentPage }) {
-  const [recipes] = useState(mockRecipes);
+  const navigate = useNavigate();
+  const [recipes, setRecipes] = useState(mockRecipes);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/recipes');
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped = data.map(r => ({
+          id: r.id,
+          title: r.title || '',
+          description: r.description || '',
+          cookTime: r.cookTime != null ? `${r.cookTime} minutes` : '',
+          servings: 0,
+          difficulty: 'Medium',
+          category: r.category || 'General',
+          author: r.author && (r.author.firstname ? `${r.author.firstname}${r.author.lastname ? ' ' + r.author.lastname : ''}` : r.author.email),
+          createdAt: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '',
+          likes: 0,
+          image: r.coverPhotoUrl || '',
+          rating: 0,
+          totalRatings: 0,
+          ingredients: typeof r.ingredients === 'string' ? r.ingredients.split(/\n+/).map(s => s.trim()).filter(Boolean) : [],
+          instructions: typeof r.instruction === 'string' ? r.instruction.split(/\n+/).map(s => s.trim()).filter(Boolean) : [],
+          tips: []
+        }));
+        setRecipes(mapped.length ? mapped : mockRecipes);
+      } catch (_) {}
+    })();
+  }, []);
 
   const getFilteredRecipes = () => {
     return recipes.filter(recipe => {
@@ -32,12 +63,13 @@ function LandingPage({ setCurrentPage }) {
         isFavorited={false}
         onToggleFavorite={() => {
             showToast("Please login first to save recipes.", 'error');
-            setCurrentPage('login');
+            navigate('/login');
           }}
         onLike={() => {}}
         userRating={0}
         onRate={() => {}}
         canEdit={false}
+        showHeader={false}
      />
     );
   }
@@ -58,8 +90,8 @@ function LandingPage({ setCurrentPage }) {
             <button className="home-button">🏠 Home</button>
           </div>
           <div className="header-buttons">
-            <button className="login-button" onClick={() => setCurrentPage('login')}>Login</button>
-            <button className="signup-button" onClick={() => setCurrentPage('signup')}>Sign Up</button>
+            <button className="login-button" onClick={() => navigate('/login')}>Login</button>
+            <button className="signup-button" onClick={() => navigate('/signup')}>Sign Up</button>
           </div>
         </div>
       </header>

@@ -10,4 +10,5 @@ import java.util.List;
 public interface RecipeRatingRepository extends JpaRepository<RecipeRating, Long> {
 	List<RecipeRating> findByRecipeId(Long recipeId);
 	List<RecipeRating> findByUserId(Long userId);
+	RecipeRating findByRecipeIdAndUserId(Long recipeId, Long userId);
 }

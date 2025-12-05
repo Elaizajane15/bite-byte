@@ -39,11 +39,7 @@ public class RecipeRatingController {
 		Recipe recipe = recipeService.findById(payload.getRecipe().getId());
 		User user = userService.findById(payload.getUser().getId());
 		if (recipe == null || user == null) return ResponseEntity.badRequest().build();
-		payload.setRecipe(recipe);
-		payload.setUser(user);
-		RecipeRating created = ratingService.create(payload);
-		URI location = URI.create("/api/ratings/" + created.getId());
-		Objects.requireNonNull(location);
-		return ResponseEntity.created(location).body(created);
+		RecipeRating result = ratingService.upsert(recipe.getId(), user.getId(), payload.getRating());
+		return ResponseEntity.ok(result);
 	}
 }

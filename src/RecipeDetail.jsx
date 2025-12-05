@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from './components/ToastContext';
 import AddRecipeModal from './AddRecipeModal';
 
-function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, userRating, onRate, onDelete, currentUser, onRecipeUpdated, canEdit }) {
+function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, userRating, onRate, onDelete, currentUser, onRecipeUpdated, canEdit, showHeader = true, onLogout }) {
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
+  const [ratingAvg, setRatingAvg] = useState(Number(recipe.rating || 0));
+  const [ratingCount, setRatingCount] = useState(Number(recipe.totalRatings || 0));
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -13,6 +16,7 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [imagePreview, setImagePreview] = useState(recipe.image || '');
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -31,6 +35,20 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
       } catch (_) {}
     })();
   }, [recipe.id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/ratings/recipe/${recipe.id}`);
+        if (!res.ok) return;
+        const list = await res.json();
+        const count = Array.isArray(list) ? list.length : 0;
+        const sum = Array.isArray(list) ? list.reduce((acc, x) => acc + (x && x.rating ? Number(x.rating) : 0), 0) : 0;
+        setRatingAvg(count ? sum / count : 0);
+        setRatingCount(count);
+      } catch (_) {}
+    })();
+  }, [recipe.id, userRating]);
   // Like recipe
   const handleLike = () => {
     if (!liked) {
@@ -113,8 +131,8 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
       const payload = {
         title: data.title,
         description: data.description,
-        ingredients: (data.ingredients || []).join('; '),
-        instruction: (data.instructions || []).join('; '),
+        ingredients: (data.ingredients || []).join('\n'),
+        instruction: (data.instructions || []).join('\n'),
         cookTime: recipe.cookTime || 0,
         cuisine: recipe.cuisine || '',
         category: data.category || recipe.category || 'General',
@@ -134,8 +152,8 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
         id: updated.id,
         title: updated.title || '',
         description: updated.description || '',
-        ingredients: typeof updated.ingredients === 'string' ? updated.ingredients.split(';').map(s => s.trim()).filter(Boolean) : [],
-        instructions: typeof updated.instruction === 'string' ? updated.instruction.split(';').map(s => s.trim()).filter(Boolean) : [],
+        ingredients: typeof updated.ingredients === 'string' ? updated.ingredients.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
+        instructions: typeof updated.instruction === 'string' ? updated.instruction.split(/[\n;]+/).map(s => s.trim()).filter(Boolean) : [],
         cookTime: updated.cookTime || 0,
         category: updated.category || 'General',
         difficulty: recipe.difficulty,
@@ -187,6 +205,42 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
 
   return (
     <div className="recipe-detail">
+      {showHeader && (
+        <header className="header">
+          <div className="header-content">
+            <div className="logo" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>
+              <div className="logo-icon">🍳</div>
+              <div>
+                <div className="logo-title">RecipeShare</div>
+                <div className="logo-subtitle">Share & Discover</div>
+              </div>
+            </div>
+
+            <div className="header-center">
+              <button className="nav-btn" onClick={() => navigate('/home')}>🏠 Home</button>
+            </div>
+
+            <div className="header-right">
+              {currentUser && currentUser.id ? (
+                <>
+                  <button className="user-info">
+                    <span className="user-icon">👤</span>
+                    {currentUser.name}
+                  </button>
+                  {typeof onLogout === 'function' && (
+                    <button className="logout-button" onClick={() => { onLogout(); navigate('/'); }}>Logout</button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button className="login-button" onClick={() => navigate('/login')}>Login</button>
+                  <button className="signup-button" onClick={() => navigate('/signup')}>Sign Up</button>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+      )}
       <button className="back-btn" onClick={onBack}>
         ← Back to Recipes
       </button>
@@ -218,8 +272,8 @@ function RecipeDetail({ recipe, onBack, isFavorited, onToggleFavorite, onLike, u
 
           <div className="recipe-rating-section">
             <div className="rating-display">
-              <span className="rating-stars">⭐ {recipe.rating.toFixed(1)}</span>
-              <span className="rating-count">({recipe.totalRatings} ratings)</span>
+              <span className="rating-stars">⭐ {Number(ratingAvg || 0).toFixed(1)}</span>
+              <span className="rating-count">({ratingCount} ratings)</span>
             </div>
             <div className="rate-recipe">
               <span>Rate this recipe:</span>

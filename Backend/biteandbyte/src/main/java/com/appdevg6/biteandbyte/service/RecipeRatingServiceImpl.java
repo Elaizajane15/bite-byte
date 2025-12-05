@@ -22,6 +22,22 @@ public class RecipeRatingServiceImpl implements RecipeRatingService {
 	}
 
 	@Override
+	public RecipeRating upsert(Long recipeId, Long userId, Integer rating) {
+		RecipeRating existing = recipeRatingRepository.findByRecipeIdAndUserId(recipeId, userId);
+		if (existing != null) {
+			existing.setRating(rating);
+			return recipeRatingRepository.save(existing);
+		}
+		RecipeRating created = RecipeRating.builder()
+			.recipe(com.appdevg6.biteandbyte.entity.Recipe.builder().id(recipeId).build())
+			.user(com.appdevg6.biteandbyte.entity.User.builder().id(userId).build())
+			.rating(rating)
+			.createdAt(LocalDateTime.now())
+			.build();
+		return recipeRatingRepository.save(created);
+	}
+
+	@Override
 	public List<RecipeRating> findByRecipeId(Long recipeId) {
 		return recipeRatingRepository.findByRecipeId(recipeId);
 	}
